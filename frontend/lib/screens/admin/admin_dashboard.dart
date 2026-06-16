@@ -14,6 +14,8 @@ class AdminDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashAsync = ref.watch(adminDashboardProvider);
     final user = ref.watch(authProvider).user;
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
 
     return Column(
       children: [
@@ -30,22 +32,42 @@ class AdminDashboard extends ConsumerWidget {
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // KPI Row
                 dashAsync.when(
-                  loading: () => Row(
-                    children: List.generate(4, (_) {
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: LoadingShimmer.metric(),
+                  loading: () => isMobile
+                      ? Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(child: LoadingShimmer.metric()),
+                                const SizedBox(width: 16),
+                                Expanded(child: LoadingShimmer.metric()),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(child: LoadingShimmer.metric()),
+                                const SizedBox(width: 16),
+                                Expanded(child: LoadingShimmer.metric()),
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: List.generate(4, (_) {
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 16),
+                                child: LoadingShimmer.metric(),
+                              ),
+                            );
+                          }),
                         ),
-                      );
-                    }),
-                  ),
                   error: (e, _) => Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -73,49 +95,68 @@ class AdminDashboard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  data: (stats) => Row(
-                    children: [
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Pending Leads',
-                          value: '${stats['pendingLeads'] ?? 0}',
-                          icon: Icons.pending_actions_rounded,
-                          color: AppColors.warning,
-                          subtitle: 'Awaiting approval',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Blocked Rooms',
-                          value: '${stats['blockedRooms'] ?? 0}',
-                          icon: Icons.block_rounded,
-                          color: AppColors.error,
-                          subtitle: 'Rooms reserved',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Confirmed Bookings',
-                          value: '${stats['confirmedBookings'] ?? 0}',
-                          icon: Icons.check_circle_rounded,
-                          color: AppColors.success,
-                          subtitle: 'Active bookings',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Occupied Rooms',
-                          value: '${stats['occupiedRooms'] ?? 0}',
-                          icon: Icons.hotel_rounded,
-                          color: AppColors.info,
-                          subtitle: 'Guests checked in',
-                        ),
-                      ),
-                    ],
-                  ),
+                  data: (stats) {
+                    final card1 = MetricCard(
+                      title: 'Pending Leads',
+                      value: '${stats['pendingLeads'] ?? 0}',
+                      icon: Icons.pending_actions_rounded,
+                      color: AppColors.warning,
+                      subtitle: 'Awaiting approval',
+                    );
+                    final card2 = MetricCard(
+                      title: 'Blocked Rooms',
+                      value: '${stats['blockedRooms'] ?? 0}',
+                      icon: Icons.block_rounded,
+                      color: AppColors.error,
+                      subtitle: 'Rooms reserved',
+                    );
+                    final card3 = MetricCard(
+                      title: 'Confirmed Bookings',
+                      value: '${stats['confirmedBookings'] ?? 0}',
+                      icon: Icons.check_circle_rounded,
+                      color: AppColors.success,
+                      subtitle: 'Active bookings',
+                    );
+                    final card4 = MetricCard(
+                      title: 'Occupied Rooms',
+                      value: '${stats['occupiedRooms'] ?? 0}',
+                      icon: Icons.hotel_rounded,
+                      color: AppColors.info,
+                      subtitle: 'Guests checked in',
+                    );
+
+                    return isMobile
+                        ? Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: card1),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: card2),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: card3),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: card4),
+                                ],
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(child: card1),
+                              const SizedBox(width: 16),
+                              Expanded(child: card2),
+                              const SizedBox(width: 16),
+                              Expanded(child: card3),
+                              const SizedBox(width: 16),
+                              Expanded(child: card4),
+                            ],
+                          );
+                  },
                 ),
                 const SizedBox(height: 32),
                 Text('Quick Overview', style: AppTextStyles.sectionTitle),

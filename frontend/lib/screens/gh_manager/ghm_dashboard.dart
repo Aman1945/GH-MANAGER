@@ -17,6 +17,12 @@ class GHMDashboard extends ConsumerWidget {
     final dashAsync = ref.watch(ghmDashboardProvider);
     final user = ref.watch(authProvider).user;
     final roomsAsync = ref.watch(roomsProvider);
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+    final isTablet = width >= 600 && width < 900;
+
+    final gridCrossAxisCount = isMobile ? 2 : (isTablet ? 3 : 4);
+    final gridChildAspectRatio = isMobile ? 1.4 : 1.8;
 
     return Column(
       children: [
@@ -39,22 +45,36 @@ class GHMDashboard extends ConsumerWidget {
         ),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // KPI Row
                 dashAsync.when(
-                  loading: () => Row(
-                    children: List.generate(3, (_) {
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: LoadingShimmer.metric(),
+                  loading: () => isMobile
+                      ? Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(child: LoadingShimmer.metric()),
+                                const SizedBox(width: 16),
+                                Expanded(child: LoadingShimmer.metric()),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            LoadingShimmer.metric(),
+                          ],
+                        )
+                      : Row(
+                          children: List.generate(3, (_) {
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 16),
+                                child: LoadingShimmer.metric(),
+                              ),
+                            );
+                          }),
                         ),
-                      );
-                    }),
-                  ),
                   error: (e, _) => Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -79,39 +99,53 @@ class GHMDashboard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  data: (stats) => Row(
-                    children: [
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Occupied Rooms',
-                          value: '${stats['occupiedRooms'] ?? 0}',
-                          icon: Icons.hotel_rounded,
-                          color: AppColors.error,
-                          subtitle: 'Guests checked in',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Available Rooms',
-                          value: '${stats['availableRooms'] ?? 0}',
-                          icon: Icons.meeting_room_rounded,
-                          color: AppColors.success,
-                          subtitle: 'Ready for booking',
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: MetricCard(
-                          title: 'Blocked Rooms',
-                          value: '${stats['blockedRooms'] ?? 0}',
-                          icon: Icons.block_rounded,
-                          color: AppColors.warning,
-                          subtitle: 'Reserved rooms',
-                        ),
-                      ),
-                    ],
-                  ),
+                  data: (stats) {
+                    final card1 = MetricCard(
+                      title: 'Occupied Rooms',
+                      value: '${stats['occupiedRooms'] ?? 0}',
+                      icon: Icons.hotel_rounded,
+                      color: AppColors.error,
+                      subtitle: 'Guests checked in',
+                    );
+                    final card2 = MetricCard(
+                      title: 'Available Rooms',
+                      value: '${stats['availableRooms'] ?? 0}',
+                      icon: Icons.meeting_room_rounded,
+                      color: AppColors.success,
+                      subtitle: 'Ready for booking',
+                    );
+                    final card3 = MetricCard(
+                      title: 'Blocked Rooms',
+                      value: '${stats['blockedRooms'] ?? 0}',
+                      icon: Icons.block_rounded,
+                      color: AppColors.warning,
+                      subtitle: 'Reserved rooms',
+                    );
+
+                    return isMobile
+                        ? Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: card1),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: card2),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              card3,
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(child: card1),
+                              const SizedBox(width: 16),
+                              Expanded(child: card2),
+                              const SizedBox(width: 16),
+                              Expanded(child: card3),
+                            ],
+                          );
+                  },
                 ),
 
                 const SizedBox(height: 28),
@@ -123,12 +157,11 @@ class GHMDashboard extends ConsumerWidget {
                   loading: () => GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: gridCrossAxisCount,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.6,
+                      childAspectRatio: gridChildAspectRatio,
                     ),
                     itemCount: 8,
                     itemBuilder: (_, __) => LoadingShimmer(
@@ -143,12 +176,11 @@ class GHMDashboard extends ConsumerWidget {
                     return GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: gridCrossAxisCount,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1.8,
+                        childAspectRatio: gridChildAspectRatio,
                       ),
                       itemCount: rooms.length,
                       itemBuilder: (context, index) {

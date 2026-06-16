@@ -29,44 +29,67 @@ class GHMRooms extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final roomsAsync = ref.watch(roomsProvider);
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+    final isTablet = width >= 600 && width < 900;
+
+    final crossAxisCount = isMobile ? 2 : (isTablet ? 3 : 4);
+    final childAspectRatio = isMobile ? 1.1 : 1.0;
+
+    Widget legendWidget() {
+      return Row(
+        mainAxisAlignment: isMobile ? MainAxisAlignment.center : MainAxisAlignment.start,
+        children: [
+          _LegendDot(color: AppColors.success, label: 'Available'),
+          const SizedBox(width: 16),
+          _LegendDot(color: AppColors.warning, label: 'Blocked'),
+          const SizedBox(width: 16),
+          _LegendDot(color: AppColors.error, label: 'Occupied'),
+        ],
+      );
+    }
 
     return Column(
       children: [
         AppHeader(
           title: 'Room Status',
           subtitle: 'Live room availability',
-          actions: [
-            // Legend
-            Row(
-              children: [
-                _LegendDot(color: AppColors.success, label: 'Available'),
-                const SizedBox(width: 16),
-                _LegendDot(color: AppColors.warning, label: 'Blocked'),
-                const SizedBox(width: 16),
-                _LegendDot(color: AppColors.error, label: 'Occupied'),
-              ],
-            ),
-            const SizedBox(width: 16),
-            OutlinedButton.icon(
-              onPressed: () => ref
-                  .read(roomsProvider.notifier)
-                  .fetchRooms(guestHouseId: user?.guestHouseId),
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Refresh'),
-            ),
-          ],
+          actions: isMobile
+              ? [
+                  IconButton(
+                    onPressed: () => ref
+                        .read(roomsProvider.notifier)
+                        .fetchRooms(guestHouseId: user?.guestHouseId),
+                    icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary),
+                  ),
+                ]
+              : [
+                  legendWidget(),
+                  const SizedBox(width: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => ref
+                        .read(roomsProvider.notifier)
+                        .fetchRooms(guestHouseId: user?.guestHouseId),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Refresh'),
+                  ),
+                ],
         ),
+        if (isMobile)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: legendWidget(),
+          ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
             child: roomsAsync.when(
               loading: () => GridView.builder(
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 140 / 140,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: isMobile ? 12 : 16,
+                  mainAxisSpacing: isMobile ? 12 : 16,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: 9,
                 itemBuilder: (_, __) => LoadingShimmer(
@@ -105,12 +128,11 @@ class GHMRooms extends ConsumerWidget {
                   );
                 }
                 return GridView.builder(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: isMobile ? 12 : 16,
+                    mainAxisSpacing: isMobile ? 12 : 16,
+                    childAspectRatio: childAspectRatio,
                   ),
                   itemCount: rooms.length,
                   itemBuilder: (context, index) {
@@ -144,12 +166,12 @@ class _RoomCardState extends State<_RoomCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        height: 140,
         decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border.all(
@@ -168,28 +190,30 @@ class _RoomCardState extends State<_RoomCard> {
               : [],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isMobile ? 8 : 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 widget.room.roomNumber,
                 style: AppTextStyles.metricValue.copyWith(
-                  fontSize: 32,
+                  fontSize: isMobile ? 24 : 32,
                   color: AppColors.textPrimary,
                 ),
               ),
               if (widget.room.guestHouse != null) ...[
-                const SizedBox(height: 4),
+                SizedBox(height: isMobile ? 2 : 4),
                 Text(
                   widget.room.guestHouse!.name,
-                  style: AppTextStyles.caption,
+                  style: AppTextStyles.caption.copyWith(
+                    fontSize: isMobile ? 10 : 12,
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-              const SizedBox(height: 12),
+              SizedBox(height: isMobile ? 6 : 12),
               StatusChip(status: widget.room.status),
             ],
           ),

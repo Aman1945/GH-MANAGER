@@ -232,6 +232,7 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
   @override
   Widget build(BuildContext context) {
     final lead = widget.lead;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
       decoration: BoxDecoration(
@@ -240,7 +241,7 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
         border: Border.all(color: AppColors.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isMobile ? 16 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -319,104 +320,212 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
             const SizedBox(height: 12),
 
             // Room selection + actions
-            Row(
-              children: [
-                Expanded(
-                  child: _loadingRooms
-                      ? Row(
-                          children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('Loading available rooms...',
-                                style: AppTextStyles.bodySmall),
-                          ],
-                        )
-                      : _availableRooms.isEmpty
+            isMobile
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _loadingRooms
                           ? Row(
                               children: [
-                                const Icon(Icons.info_outline,
-                                    color: AppColors.error,
-                                    size: 16),
-                                const SizedBox(width: 6),
-                                Text(
-                                    'No rooms available for these dates',
-                                    style: AppTextStyles.bodySmall
-                                        .copyWith(
-                                            color: AppColors.error)),
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary),
+                                ),
+                                const SizedBox(width: 8),
+                                Text('Loading available rooms...',
+                                    style: AppTextStyles.bodySmall),
                               ],
                             )
-                          : Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: AppColors.border),
-                                borderRadius:
-                                    BorderRadius.circular(8),
-                                color: AppColors.surfaceVariant,
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: _selectedRoomId,
-                                  hint: Text(
-                                      'Select a room to assign',
-                                      style: AppTextStyles.bodySmall),
-                                  style: AppTextStyles.bodyMedium,
-                                  items: _availableRooms.map((r) {
-                                    return DropdownMenuItem(
-                                      value: r.id,
-                                      child: Text(
-                                        'Room ${r.roomNumber}${r.guestHouse != null ? ' — ${r.guestHouse!.name}' : ''}',
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) => setState(
-                                      () => _selectedRoomId = val),
+                          : _availableRooms.isEmpty
+                              ? Row(
+                                  children: [
+                                    const Icon(Icons.info_outline,
+                                        color: AppColors.error,
+                                        size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                        'No rooms available for these dates',
+                                        style: AppTextStyles.bodySmall
+                                            .copyWith(
+                                                color: AppColors.error)),
+                                  ],
+                                )
+                              : Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: AppColors.border),
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                    color: AppColors.surfaceVariant,
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedRoomId,
+                                      isExpanded: true,
+                                      hint: Text(
+                                          'Select a room to assign',
+                                          style: AppTextStyles.bodySmall),
+                                      style: AppTextStyles.bodyMedium,
+                                      items: _availableRooms.map((r) {
+                                        return DropdownMenuItem(
+                                          value: r.id,
+                                          child: Text(
+                                            'Room ${r.roomNumber}${r.guestHouse != null ? ' — ${r.guestHouse!.name}' : ''}',
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) => setState(
+                                          () => _selectedRoomId = val),
+                                    ),
+                                  ),
                                 ),
+                      const SizedBox(height: 16),
+                      if (_isProcessing)
+                        const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _reject,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                  side: const BorderSide(color: AppColors.error),
+                                ),
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                label: const Text('Reject'),
                               ),
                             ),
-                ),
-                const SizedBox(width: 16),
-                if (_isProcessing)
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _selectedRoomId == null ||
+                                        _availableRooms.isEmpty
+                                    ? null
+                                    : _approve,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  foregroundColor: Colors.white,
+                                ),
+                                icon: const Icon(Icons.check_rounded, size: 16),
+                                label: const Text('Approve'),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   )
-                else ...[
-                  OutlinedButton.icon(
-                    onPressed: _reject,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                    ),
-                    icon: const Icon(Icons.close_rounded, size: 16),
-                    label: const Text('Reject'),
+                : Row(
+                    children: [
+                      Expanded(
+                        child: _loadingRooms
+                            ? Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('Loading available rooms...',
+                                      style: AppTextStyles.bodySmall),
+                                ],
+                              )
+                            : _availableRooms.isEmpty
+                                ? Row(
+                                    children: [
+                                      const Icon(Icons.info_outline,
+                                          color: AppColors.error,
+                                          size: 16),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                          'No rooms available for these dates',
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                  color: AppColors.error)),
+                                    ],
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: AppColors.border),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                      color: AppColors.surfaceVariant,
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _selectedRoomId,
+                                        hint: Text(
+                                            'Select a room to assign',
+                                            style: AppTextStyles.bodySmall),
+                                        style: AppTextStyles.bodyMedium,
+                                        items: _availableRooms.map((r) {
+                                          return DropdownMenuItem(
+                                            value: r.id,
+                                            child: Text(
+                                              'Room ${r.roomNumber}${r.guestHouse != null ? ' — ${r.guestHouse!.name}' : ''}',
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) => setState(
+                                            () => _selectedRoomId = val),
+                                      ),
+                                    ),
+                                  ),
+                      ),
+                      const SizedBox(width: 16),
+                      if (_isProcessing)
+                        const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary),
+                        )
+                      else ...[
+                        OutlinedButton.icon(
+                          onPressed: _reject,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error),
+                          ),
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          label: const Text('Reject'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _selectedRoomId == null ||
+                                  _availableRooms.isEmpty
+                              ? null
+                              : _approve,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(Icons.check_rounded, size: 16),
+                          label: const Text('Approve & Assign Room'),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: _selectedRoomId == null ||
-                            _availableRooms.isEmpty
-                        ? null
-                        : _approve,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(Icons.check_rounded, size: 16),
-                    label: const Text('Approve & Assign Room'),
-                  ),
-                ],
-              ],
-            ),
           ],
         ),
       ),

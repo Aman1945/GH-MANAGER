@@ -103,6 +103,7 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
   @override
   Widget build(BuildContext context) {
     final bookingsAsync = ref.watch(bookingsProvider);
+    final isMobile = MediaQuery.of(context).size.width < 800;
 
     return Column(
       children: [
@@ -157,70 +158,137 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
                         ),
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 280,
-                            child: TextField(
-                              onChanged: (v) =>
-                                  setState(() => _searchQuery = v),
-                              style: AppTextStyles.bodyMedium,
-                              decoration: InputDecoration(
-                                hintText: 'Search by guest name...',
-                                prefixIcon: const Icon(Icons.search,
-                                    color: AppColors.textMuted,
-                                    size: 20),
-                                contentPadding:
-                                    const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 10),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                      color: AppColors.border),
+                      child: isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextField(
+                                  onChanged: (v) =>
+                                      setState(() => _searchQuery = v),
+                                  style: AppTextStyles.bodyMedium,
+                                  decoration: InputDecoration(
+                                    hintText: 'Search by guest name...',
+                                    prefixIcon: const Icon(Icons.search,
+                                        color: AppColors.textMuted,
+                                        size: 20),
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 10),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: const BorderSide(
+                                          color: AppColors.border),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: const BorderSide(
+                                          color: AppColors.border),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: const BorderSide(
+                                          color: AppColors.borderFocus,
+                                          width: 2),
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    isDense: true,
+                                  ),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                      color: AppColors.border),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    DropdownButton<String>(
+                                      value: _statusFilter,
+                                      underline: const SizedBox.shrink(),
+                                      style: AppTextStyles.bodyMedium,
+                                      items: const [
+                                        DropdownMenuItem(
+                                            value: 'ALL', child: Text('All Status')),
+                                        DropdownMenuItem(
+                                            value: 'CONFIRMED',
+                                            child: Text('Confirmed')),
+                                        DropdownMenuItem(
+                                            value: 'COMPLETED',
+                                            child: Text('Completed')),
+                                        DropdownMenuItem(
+                                            value: 'CANCELLED',
+                                            child: Text('Cancelled')),
+                                      ],
+                                      onChanged: (v) =>
+                                          setState(() => _statusFilter = v ?? 'ALL'),
+                                    ),
+                                    Text('${filtered.length} bookings',
+                                        style: AppTextStyles.caption),
+                                  ],
                                 ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                      color: AppColors.borderFocus,
-                                      width: 2),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                SizedBox(
+                                  width: 280,
+                                  child: TextField(
+                                    onChanged: (v) =>
+                                        setState(() => _searchQuery = v),
+                                    style: AppTextStyles.bodyMedium,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search by guest name...',
+                                      prefixIcon: const Icon(Icons.search,
+                                          color: AppColors.textMuted,
+                                          size: 20),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 10),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                            color: AppColors.border),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                            color: AppColors.border),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                            color: AppColors.borderFocus,
+                                            width: 2),
+                                      ),
+                                      filled: true,
+                                      fillColor: AppColors.surfaceVariant,
+                                      isDense: true,
+                                    ),
+                                  ),
                                 ),
-                                filled: true,
-                                fillColor: AppColors.surfaceVariant,
-                                isDense: true,
-                              ),
+                                const SizedBox(width: 12),
+                                DropdownButton<String>(
+                                  value: _statusFilter,
+                                  underline: const SizedBox.shrink(),
+                                  style: AppTextStyles.bodyMedium,
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'ALL', child: Text('All Status')),
+                                    DropdownMenuItem(
+                                        value: 'CONFIRMED',
+                                        child: Text('Confirmed')),
+                                    DropdownMenuItem(
+                                        value: 'COMPLETED',
+                                        child: Text('Completed')),
+                                    DropdownMenuItem(
+                                        value: 'CANCELLED',
+                                        child: Text('Cancelled')),
+                                  ],
+                                  onChanged: (v) =>
+                                      setState(() => _statusFilter = v ?? 'ALL'),
+                                ),
+                                const Spacer(),
+                                Text('${filtered.length} bookings',
+                                    style: AppTextStyles.caption),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          DropdownButton<String>(
-                            value: _statusFilter,
-                            underline: const SizedBox.shrink(),
-                            style: AppTextStyles.bodyMedium,
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'ALL', child: Text('All Status')),
-                              DropdownMenuItem(
-                                  value: 'CONFIRMED',
-                                  child: Text('Confirmed')),
-                              DropdownMenuItem(
-                                  value: 'COMPLETED',
-                                  child: Text('Completed')),
-                              DropdownMenuItem(
-                                  value: 'CANCELLED',
-                                  child: Text('Cancelled')),
-                            ],
-                            onChanged: (v) =>
-                                setState(() => _statusFilter = v ?? 'ALL'),
-                          ),
-                          const Spacer(),
-                          Text('${filtered.length} bookings',
-                              style: AppTextStyles.caption),
-                        ],
-                      ),
                     ),
 
                     // Table
@@ -244,11 +312,14 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
                                 scrollDirection: Axis.vertical,
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
-                                  child: _BookingsTable(
-                                    bookings: filtered,
-                                    dateFormat: _dateFormat,
-                                    onMarkPaid: _markPaid,
-                                    onCheckout: _checkout,
+                                  child: SizedBox(
+                                    width: 1020,
+                                    child: _BookingsTable(
+                                      bookings: filtered,
+                                      dateFormat: _dateFormat,
+                                      onMarkPaid: _markPaid,
+                                      onCheckout: _checkout,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -371,7 +442,7 @@ class _TCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: child,
     );
   }

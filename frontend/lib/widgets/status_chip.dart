@@ -58,8 +58,10 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _colors();
+    final isSmall = MediaQuery.of(context).size.width < 600;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: isSmall ? 6 : 10, vertical: isSmall ? 2 : 4),
       decoration: BoxDecoration(
         color: colors.bg,
         borderRadius: BorderRadius.circular(20),
@@ -68,19 +70,19 @@ class StatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 4,
-            height: 4,
+            width: isSmall ? 3 : 4,
+            height: isSmall ? 3 : 4,
             decoration: BoxDecoration(
               color: colors.text,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: isSmall ? 4 : 6),
           Text(
             status,
             style: TextStyle(
               color: colors.text,
-              fontSize: 12,
+              fontSize: isSmall ? 10 : 12,
               fontWeight: FontWeight.w600,
             ),
           ),
