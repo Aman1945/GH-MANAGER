@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String baseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://localhost:5000/api',
+  defaultValue: 'https://gh-manager-backend.onrender.com/api',
 );
 
 class ApiService {
@@ -17,8 +17,8 @@ class ApiService {
   void init() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 45),
+      receiveTimeout: const Duration(seconds: 45),
     ));
 
     _dio.interceptors.add(InterceptorsWrapper(

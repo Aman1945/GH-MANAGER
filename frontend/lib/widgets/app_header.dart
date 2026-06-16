@@ -15,6 +15,8 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
+
     return Container(
       height: 72,
       decoration: const BoxDecoration(
@@ -26,6 +28,13 @@ class AppHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
+          if (isMobile) ...[
+            IconButton(
+              icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+            const SizedBox(width: 8),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

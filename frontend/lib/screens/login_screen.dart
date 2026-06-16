@@ -47,10 +47,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(
-        children: [
-          // Left panel
-          if (showLeft)
+      body: SafeArea(
+        child: Row(
+          children: [
+            // Left panel
+            if (showLeft)
             Container(
               width: width * 0.4,
               decoration: const BoxDecoration(
