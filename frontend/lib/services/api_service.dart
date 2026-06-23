@@ -1,10 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:developer' as developer;
 
 const String baseUrl = String.fromEnvironment(
   'API_URL',
   defaultValue: 'https://gh-manager-backend.onrender.com/api',
 );
+
+void _log(String msg) {
+  developer.log('🌐 API: $msg');
+  print('🌐 API: $msg');
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -15,11 +21,15 @@ class ApiService {
   final Future<SharedPreferences> _prefs = SharedPreferences.getInstance();
 
   void init() {
+    _log('Initializing with baseUrl: $baseUrl');
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 45),
-      receiveTimeout: const Duration(seconds: 45),
+      connectTimeout: const Duration(seconds: 50),
+      receiveTimeout: const Duration(seconds: 50),
     ));
+
+    // Fire-and-forget pre-warm request to wake up Render free tier backend
+    _preWarmBackend();
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -38,6 +48,10 @@ class ApiService {
         handler.next(error);
       },
     ));
+  }
+
+  void _preWarmBackend() {
+    _dio.get('/health').catchError((_) => Response(requestOptions: RequestOptions()));
   }
 
   String _extractErrorMessage(DioException e) {
@@ -64,7 +78,11 @@ class ApiService {
   Future<Map<String, dynamic>> getMe() async {
     try {
       final response = await _dio.get('/auth/me');
-      return Map<String, dynamic>.from(response.data as Map);
+      final resData = response.data;
+      if (resData is Map && resData['data'] != null) {
+        return Map<String, dynamic>.from(resData['data'] as Map);
+      }
+      return {};
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e));
     }
@@ -73,27 +91,51 @@ class ApiService {
   // Dashboard
   Future<Map<String, dynamic>> getAdminDashboard() async {
     try {
+      _log('Fetching admin dashboard...');
       final response = await _dio.get('/dashboard/admin');
-      return Map<String, dynamic>.from(response.data as Map);
+      _log('Admin dashboard response: ${response.data}');
+      final resData = response.data;
+      if (resData is Map && resData['data'] != null) {
+        final data = Map<String, dynamic>.from(resData['data'] as Map);
+        _log('Extracted admin dashboard data: $data');
+        return data;
+      }
+      _log('No data field in response');
+      return {};
     } on DioException catch (e) {
+      _log('ERROR in getAdminDashboard: ${_extractErrorMessage(e)}');
       throw Exception(_extractErrorMessage(e));
     }
   }
 
   Future<Map<String, dynamic>> getBMDashboard() async {
     try {
+      _log('Fetching BM dashboard...');
       final response = await _dio.get('/dashboard/booking-manager');
-      return Map<String, dynamic>.from(response.data as Map);
+      _log('BM dashboard response: ${response.data}');
+      final resData = response.data;
+      if (resData is Map && resData['data'] != null) {
+        return Map<String, dynamic>.from(resData['data'] as Map);
+      }
+      return {};
     } on DioException catch (e) {
+      _log('ERROR in getBMDashboard: ${_extractErrorMessage(e)}');
       throw Exception(_extractErrorMessage(e));
     }
   }
 
   Future<Map<String, dynamic>> getGHMDashboard() async {
     try {
+      _log('Fetching GHM dashboard...');
       final response = await _dio.get('/dashboard/gh-manager');
-      return Map<String, dynamic>.from(response.data as Map);
+      _log('GHM dashboard response: ${response.data}');
+      final resData = response.data;
+      if (resData is Map && resData['data'] != null) {
+        return Map<String, dynamic>.from(resData['data'] as Map);
+      }
+      return {};
     } on DioException catch (e) {
+      _log('ERROR in getGHMDashboard: ${_extractErrorMessage(e)}');
       throw Exception(_extractErrorMessage(e));
     }
   }
@@ -217,6 +259,114 @@ class ApiService {
         return List<dynamic>.from(data['data'] as List);
       }
       return [];
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  // Guest Houses
+  Future<List<dynamic>> getGuestHouses() async {
+    try {
+      final response = await _dio.get('/guest-houses');
+      final data = response.data;
+      if (data is Map && data['data'] != null) {
+        return List<dynamic>.from(data['data'] as List);
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  // Maintenance/Room Reports
+  Future<List<dynamic>> getMaintenanceRequests() async {
+    try {
+      final response = await _dio.get('/maintenance');
+      final data = response.data;
+      if (data is Map && data['data'] != null) {
+        return List<dynamic>.from(data['data'] as List);
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> createMaintenanceRequest(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/maintenance', data: data);
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> resolveMaintenanceRequest(String id) async {
+    try {
+      final response = await _dio.patch('/maintenance/$id/resolve');
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  // Sessions (Admin)
+  Future<Map<String, dynamic>> getSessions() async {
+    try {
+      _log('Fetching admin sessions...');
+      final response = await _dio.get('/admin/sessions');
+      _log('Sessions response: ${response.data}');
+      if (response.data is Map && response.data['data'] != null) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {};
+    } on DioException catch (e) {
+      _log('ERROR in getSessions: ${_extractErrorMessage(e)}');
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> logoutSession(String sessionId) async {
+    try {
+      _log('Logging out session: $sessionId');
+      final response = await _dio.post('/admin/sessions/$sessionId/logout');
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> getLoginStats() async {
+    try {
+      _log('Fetching login stats...');
+      final response = await _dio.get('/admin/login-stats');
+      if (response.data is Map && response.data['data'] != null) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      return {};
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> logout() async {
+    try {
+      _log('User logout...');
+      final response = await _dio.post('/auth/logout');
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> changePassword(String oldPassword, String newPassword) async {
+    try {
+      _log('Changing password...');
+      final response = await _dio.post('/password-change', data: {
+        'oldPassword': oldPassword,
+        'newPassword': newPassword
+      });
+      return Map<String, dynamic>.from(response.data as Map);
     } on DioException catch (e) {
       throw Exception(_extractErrorMessage(e));
     }

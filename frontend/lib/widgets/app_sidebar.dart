@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 
+/// Legacy sidebar widget — kept for reference but no longer used in app UI.
+/// The app now uses bottom tab navigation via role-specific shells.
+
 class SidebarItem {
   final String label;
   final IconData icon;
@@ -31,56 +34,38 @@ class AppSidebar extends StatelessWidget {
     required this.onLogout,
   });
 
+  // Dark sidebar colors (nav-dark palette)
+  static const Color _bg = Color(0xFF0D1B2A);
+  static const Color _activeText = Colors.white;
+  static const Color _mutedText = Color(0xFF6B7B8D);
+  static const Color _accent = Color(0xFF14315E);
+  static const Color _itemHover = Color(0xFF1E2D3D);
+
   List<SidebarItem> _itemsForRole() {
     switch (role) {
       case 'ADMIN':
         return const [
-          SidebarItem(
-            label: 'Dashboard',
-            icon: Icons.dashboard_rounded,
-            route: '/admin/dashboard',
-          ),
-          SidebarItem(
-            label: 'Leads',
-            icon: Icons.person_add_rounded,
-            route: '/admin/leads',
-          ),
-          SidebarItem(
-            label: 'Bookings',
-            icon: Icons.calendar_month_rounded,
-            route: '/admin/bookings',
-          ),
-          SidebarItem(
-            label: 'Rooms',
-            icon: Icons.meeting_room_rounded,
-            route: '/admin/rooms',
-          ),
+          SidebarItem(label: 'Dashboard', icon: Icons.dashboard_rounded, route: '/admin/dashboard'),
+          SidebarItem(label: 'Leads', icon: Icons.person_add_rounded, route: '/admin/leads'),
+          SidebarItem(label: 'Bookings', icon: Icons.calendar_month_rounded, route: '/admin/bookings'),
+          SidebarItem(label: 'Rooms', icon: Icons.meeting_room_rounded, route: '/admin/rooms'),
+          SidebarItem(label: 'Live Rooms', icon: Icons.grid_view_rounded, route: '/admin/room-live'),
+          SidebarItem(label: 'Room Reports', icon: Icons.report_problem_outlined, route: '/admin/reports'),
         ];
       case 'BOOKING_MANAGER':
         return const [
-          SidebarItem(
-            label: 'Dashboard',
-            icon: Icons.dashboard_rounded,
-            route: '/bm/dashboard',
-          ),
-          SidebarItem(
-            label: 'Approvals',
-            icon: Icons.fact_check_rounded,
-            route: '/bm/approvals',
-          ),
+          SidebarItem(label: 'Dashboard', icon: Icons.dashboard_rounded, route: '/bm/dashboard'),
+          SidebarItem(label: 'Approvals', icon: Icons.fact_check_rounded, route: '/bm/approvals'),
+          SidebarItem(label: 'Bookings', icon: Icons.calendar_month_rounded, route: '/bm/bookings'),
+          SidebarItem(label: 'Live Rooms', icon: Icons.grid_view_rounded, route: '/bm/room-live'),
+          SidebarItem(label: 'Room Reports', icon: Icons.report_problem_outlined, route: '/bm/reports'),
         ];
       case 'GH_MANAGER':
         return const [
-          SidebarItem(
-            label: 'Dashboard',
-            icon: Icons.dashboard_rounded,
-            route: '/ghm/dashboard',
-          ),
-          SidebarItem(
-            label: 'Room Status',
-            icon: Icons.meeting_room_rounded,
-            route: '/ghm/rooms',
-          ),
+          SidebarItem(label: 'Dashboard', icon: Icons.dashboard_rounded, route: '/ghm/dashboard'),
+          SidebarItem(label: 'Room Status', icon: Icons.meeting_room_rounded, route: '/ghm/rooms'),
+          SidebarItem(label: 'Live Rooms', icon: Icons.grid_view_rounded, route: '/ghm/room-live'),
+          SidebarItem(label: 'Room Reports', icon: Icons.report_problem_outlined, route: '/ghm/reports'),
         ];
       default:
         return [];
@@ -89,24 +74,17 @@ class AppSidebar extends StatelessWidget {
 
   String _roleLabel() {
     switch (role) {
-      case 'ADMIN':
-        return 'Admin';
-      case 'BOOKING_MANAGER':
-        return 'Booking Manager';
-      case 'GH_MANAGER':
-        return 'GH Manager';
-      default:
-        return role;
+      case 'ADMIN': return 'Admin';
+      case 'BOOKING_MANAGER': return 'Booking Manager';
+      case 'GH_MANAGER': return 'GH Manager';
+      default: return role;
     }
   }
 
   String _initials() {
     final parts = userName.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
-      return parts[0][0].toUpperCase();
-    }
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    if (parts.isNotEmpty && parts[0].isNotEmpty) return parts[0][0].toUpperCase();
     return 'U';
   }
 
@@ -116,163 +94,132 @@ class AppSidebar extends StatelessWidget {
 
     return Container(
       width: 260,
-      color: AppColors.sidebarBg,
-      child: Column(
-        children: [
-          // Logo section
-          Container(
-            height: 72,
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Color(0xFF374151), width: 1),
+      color: _bg,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Logo section
+            Container(
+              height: 72,
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: _itemHover, width: 1)),
               ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.eco_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'GH Manager',
-                      style: AppTextStyles.sidebarItem.copyWith(
-                        color: AppColors.sidebarTextActive,
-                        fontSize: 16,
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    Text(
-                      'v2.0',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.sidebarText,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // User card
-          Container(
-            margin: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF374151),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.primary,
-                  child: Text(
-                    _initials(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    child: const Icon(Icons.eco_rounded, color: Colors.white, size: 18),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        userName,
-                        style: AppTextStyles.sidebarItem.copyWith(
-                          color: AppColors.sidebarTextActive,
-                          fontSize: 13,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4B5563),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _roleLabel(),
-                          style: const TextStyle(
-                            color: Color(0xFF6EE7B7),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
+                      Text('GH Manager',
+                          style: AppTextStyles.cardTitle.copyWith(color: _activeText, fontSize: 16)),
+                      Text('v2.0',
+                          style: AppTextStyles.caption.copyWith(color: _mutedText, fontSize: 11)),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Nav section label
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'NAVIGATION',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.sidebarText,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
-                ),
+                ],
               ),
             ),
-          ),
 
-          // Nav items
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              children: items.map((item) {
-                final isActive = currentRoute.startsWith(item.route);
-                return _NavItem(
-                  item: item,
-                  isActive: isActive,
-                  onTap: () => onNavigate(item.route),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Logout
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Color(0xFF374151), width: 1),
+            // User card
+            Container(
+              margin: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _itemHover,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primary,
+                    child: Text(_initials(),
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(userName,
+                            style: AppTextStyles.cardTitle.copyWith(color: _activeText, fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4B5563),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(_roleLabel(),
+                              style: const TextStyle(
+                                  color: Color(0xFF6EE7B7), fontSize: 10, fontWeight: FontWeight.w500)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            padding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: double.infinity,
-              child: _LogoutButton(onLogout: onLogout),
+
+            // Nav section label
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('NAVIGATION',
+                    style: AppTextStyles.caption.copyWith(
+                      color: _mutedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    )),
+              ),
             ),
-          ),
-        ],
+
+            // Nav items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                children: items.map((item) {
+                  final isActive = currentRoute.startsWith(item.route);
+                  return _NavItem(
+                    item: item,
+                    isActive: isActive,
+                    onTap: () => onNavigate(item.route),
+                    activeText: _activeText,
+                    mutedText: _mutedText,
+                    accent: _accent,
+                    hoverBg: _itemHover,
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // Logout
+            Container(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: _itemHover, width: 1)),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: _LogoutButton(onLogout: onLogout, mutedText: _mutedText),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -282,11 +229,19 @@ class _NavItem extends StatefulWidget {
   final SidebarItem item;
   final bool isActive;
   final VoidCallback onTap;
+  final Color activeText;
+  final Color mutedText;
+  final Color accent;
+  final Color hoverBg;
 
   const _NavItem({
     required this.item,
     required this.isActive,
     required this.onTap,
+    required this.activeText,
+    required this.mutedText,
+    required this.accent,
+    required this.hoverBg,
   });
 
   @override
@@ -309,15 +264,10 @@ class _NavItemState extends State<_NavItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           decoration: BoxDecoration(
-            color: active || hovered
-                ? const Color(0xFF374151)
-                : Colors.transparent,
+            color: active || hovered ? widget.hoverBg : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: active
-                ? const Border(
-                    left: BorderSide(
-                        color: AppColors.sidebarAccent, width: 3),
-                  )
+                ? Border(left: BorderSide(color: widget.accent, width: 3))
                 : null,
           ),
           child: Material(
@@ -337,20 +287,14 @@ class _NavItemState extends State<_NavItem> {
                     Icon(
                       widget.item.icon,
                       size: 18,
-                      color: active || hovered
-                          ? AppColors.sidebarTextActive
-                          : AppColors.sidebarText,
+                      color: active || hovered ? widget.activeText : widget.mutedText,
                     ),
                     const SizedBox(width: 10),
                     Text(
                       widget.item.label,
-                      style: AppTextStyles.sidebarItem.copyWith(
-                        color: active || hovered
-                            ? AppColors.sidebarTextActive
-                            : AppColors.sidebarText,
-                        fontWeight: active
-                            ? FontWeight.w600
-                            : FontWeight.w500,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: active || hovered ? widget.activeText : widget.mutedText,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -366,8 +310,9 @@ class _NavItemState extends State<_NavItem> {
 
 class _LogoutButton extends StatefulWidget {
   final VoidCallback onLogout;
+  final Color mutedText;
 
-  const _LogoutButton({required this.onLogout});
+  const _LogoutButton({required this.onLogout, required this.mutedText});
 
   @override
   State<_LogoutButton> createState() => _LogoutButtonState();
@@ -384,9 +329,7 @@ class _LogoutButtonState extends State<_LogoutButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: _hovered
-              ? AppColors.error.withValues(alpha: 0.1)
-              : Colors.transparent,
+          color: _hovered ? AppColors.error.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Material(
@@ -398,18 +341,10 @@ class _LogoutButtonState extends State<_LogoutButton> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.logout_rounded,
-                    size: 18,
-                    color: AppColors.error,
-                  ),
+                  const Icon(Icons.logout_rounded, size: 18, color: AppColors.error),
                   const SizedBox(width: 10),
-                  Text(
-                    'Logout',
-                    style: AppTextStyles.sidebarItem.copyWith(
-                      color: AppColors.error,
-                    ),
-                  ),
+                  Text('Logout',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error)),
                 ],
               ),
             ),

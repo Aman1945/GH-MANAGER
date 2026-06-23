@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/theme.dart';
-import '../../models/guest_house_model.dart';
 import '../../models/room_model.dart';
 import '../../providers/rooms_provider.dart';
-import '../../widgets/app_header.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_shimmer.dart';
@@ -23,10 +21,12 @@ class _AdminRoomsState extends ConsumerState<AdminRooms> {
     switch (status.toUpperCase()) {
       case 'AVAILABLE':
         return AppColors.success;
-      case 'BLOCKED':
-        return AppColors.warning;
       case 'OCCUPIED':
         return AppColors.error;
+      case 'BLOCKED':
+        return AppColors.warning;
+      case 'MAINTENANCE':
+        return AppColors.info;
       default:
         return AppColors.border;
     }
@@ -36,108 +36,75 @@ class _AdminRoomsState extends ConsumerState<AdminRooms> {
   Widget build(BuildContext context) {
     final roomsAsync = ref.watch(roomsProvider);
     final guestHousesAsync = ref.watch(guestHousesProvider);
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
-    final isTablet = width >= 600 && width < 900;
 
-    final crossAxisCount = isMobile ? 2 : (isTablet ? 3 : 4);
-    final childAspectRatio = isMobile ? 1.1 : 1.5;
-
-    Widget buildDropdown({required bool isMobile}) {
-      return guestHousesAsync.when(
-        loading: () => SizedBox(
-            width: isMobile ? double.infinity : 200,
-            child: const LinearProgressIndicator(color: AppColors.primary)),
-        error: (_, __) => const SizedBox.shrink(),
-        data: (guestHouses) {
-          final items = <GuestHouseModel>[
-            const GuestHouseModel(id: '', name: 'All Properties'),
-            ...guestHouses,
-          ];
-          return Container(
-            height: 40,
-            width: isMobile ? double.infinity : null,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(8),
-              color: AppColors.surface,
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedGhId ?? '',
-                isExpanded: isMobile,
-                style: AppTextStyles.bodyMedium,
-                items: items.map((gh) {
-                  return DropdownMenuItem(
-                    value: gh.id,
-                    child: Text(gh.name),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  final id = val?.isEmpty == true ? null : val;
-                  setState(() => _selectedGhId = id);
-                  ref.read(roomsProvider.notifier).fetchRooms(guestHouseId: id);
-                },
-              ),
-            ),
-          );
-        },
-      );
-    }
-
-    return Column(
-      children: [
-        AppHeader(
-          title: 'Rooms',
-          subtitle: 'Room availability across all properties',
-          actions: isMobile
-              ? [
-                  IconButton(
-                    onPressed: () => ref
-                        .read(roomsProvider.notifier)
-                        .fetchRooms(guestHouseId: _selectedGhId),
-                    icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary),
-                  ),
-                ]
-              : [
-                  buildDropdown(isMobile: false),
-                  OutlinedButton.icon(
-                    onPressed: () => ref
-                        .read(roomsProvider.notifier)
-                        .fetchRooms(guestHouseId: _selectedGhId),
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Refresh'),
-                  ),
-                ],
-        ),
-        if (isMobile)
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          // GH filter chips
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: buildDropdown(isMobile: true),
+            padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+            child: guestHousesAsync.when(
+              loading: () => const SizedBox(height: 36),
+              error: (_, __) => const SizedBox(height: 36),
+              data: (ghs) {
+                final allItems = [
+                  const MapEntry('', 'All Properties'),
+                  ...ghs.map((gh) => MapEntry(gh.id, gh.name)),
+                ];
+                return SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: allItems.map((item) {
+                      final isActive = (_selectedGhId ?? '') == item.key;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(item.value),
+                          selected: isActive,
+                          onSelected: (_) {
+                            final id = item.key.isEmpty ? null : item.key;
+                            setState(() => _selectedGhId = id);
+                            ref.read(roomsProvider.notifier).fetchRooms(guestHouseId: id);
+                          },
+                          backgroundColor: AppColors.surface,
+                          selectedColor: AppColors.primarySurface,
+                          checkmarkColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                            color: isActive ? AppColors.primary : AppColors.textSecondary,
+                          ),
+                          side: BorderSide(color: isActive ? AppColors.primary : AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
+            ),
           ),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
+
+          // Room list
+          Expanded(
             child: roomsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+              loading: () => Padding(
+                padding: const EdgeInsets.all(16),
+                child: LoadingShimmer.table(rows: 8),
               ),
               error: (e, _) => Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.error, size: 48),
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
                     const SizedBox(height: 12),
-                    Text('Failed to load rooms',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.error)),
+                    const Text('Failed to load rooms'),
                     const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: () => ref
-                          .read(roomsProvider.notifier)
-                          .fetchRooms(guestHouseId: _selectedGhId),
+                      onPressed: () => ref.read(roomsProvider.notifier).fetchRooms(guestHouseId: _selectedGhId),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -148,120 +115,87 @@ class _AdminRoomsState extends ConsumerState<AdminRooms> {
                   return EmptyState(
                     icon: Icons.meeting_room_rounded,
                     title: 'No rooms found',
-                    subtitle: 'No rooms are registered in the system',
+                    subtitle: 'Try selecting a different guest house',
                   );
                 }
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: isMobile ? 12 : 16,
-                    mainAxisSpacing: isMobile ? 12 : 16,
-                    childAspectRatio: childAspectRatio,
+                return RefreshIndicator(
+                  onRefresh: () => ref.read(roomsProvider.notifier).fetchRooms(guestHouseId: _selectedGhId),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: rooms.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final room = rooms[i];
+                      final borderColor = _borderColor(room.status);
+                      return _RoomTile(room: room, accentColor: borderColor);
+                    },
                   ),
-                  itemCount: rooms.length,
-                  itemBuilder: (context, index) {
-                    return _RoomCard(
-                      room: rooms[index],
-                      borderColor: _borderColor(rooms[index].status),
-                    );
-                  },
                 );
               },
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoomCard extends StatefulWidget {
-  final RoomModel room;
-  final Color borderColor;
-
-  const _RoomCard({
-    required this.room,
-    required this.borderColor,
-  });
-
-  @override
-  State<_RoomCard> createState() => _RoomCardState();
-}
-
-class _RoomCardState extends State<_RoomCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(
-              color: widget.borderColor,
-              width: _hovered ? 2 : 1),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: _hovered
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : [],
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 8 : 16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                widget.room.roomNumber,
-                style: AppTextStyles.cardTitle.copyWith(
-                  fontSize: isMobile ? 16 : 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              SizedBox(height: isMobile ? 2 : 4),
-              Text(
-                widget.room.guestHouse?.name ?? '',
-                style: AppTextStyles.caption.copyWith(
-                  fontSize: isMobile ? 10 : 12,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: isMobile ? 6 : 12),
-              StatusChip(status: widget.room.status),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// Keep empty shimmer widget for completeness
-// ignore: unused_element
-Widget _buildShimmerGrid() {
-  return GridView.builder(
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.6,
-    ),
-    itemCount: 6,
-    itemBuilder: (_, __) => LoadingShimmer(
-      width: double.infinity,
-      height: 120,
-      borderRadius: 12,
-    ),
-  );
+class _RoomTile extends StatelessWidget {
+  final RoomModel room;
+  final Color accentColor;
+
+  const _RoomTile({required this.room, required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: accentColor, width: 4),
+          top: BorderSide(color: AppColors.border),
+          right: BorderSide(color: AppColors.border),
+          bottom: BorderSide(color: AppColors.border),
+        ),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 3, offset: const Offset(0, 1))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  room.roomNumber,
+                  style: AppTextStyles.cardTitle.copyWith(
+                    color: accentColor,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Room ${room.roomNumber}', style: AppTextStyles.cardTitle),
+                  if (room.guestHouse != null)
+                    Text(room.guestHouse!.name, style: AppTextStyles.caption),
+                ],
+              ),
+            ),
+            StatusChip(status: room.status),
+          ],
+        ),
+      ),
+    );
+  }
 }

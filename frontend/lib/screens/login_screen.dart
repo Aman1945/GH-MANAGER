@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
@@ -15,19 +16,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+  bool _showServerWakingMessage = false;
+  Timer? _wakingTimer;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _wakingTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _showServerWakingMessage = false);
+    _wakingTimer?.cancel();
+    _wakingTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && ref.read(authProvider).isLoading) {
+        setState(() => _showServerWakingMessage = true);
+      }
+    });
     await ref
         .read(authProvider.notifier)
         .login(_emailCtrl.text.trim(), _passCtrl.text.trim());
+    _wakingTimer?.cancel();
+    if (mounted) setState(() => _showServerWakingMessage = false);
   }
 
   void _fillCredentials(String email, String pass) {
@@ -42,141 +55,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authProvider);
     final isLoading = authState.isLoading;
     final error = authState.error;
-    final width = MediaQuery.of(context).size.width;
-    final showLeft = width >= 800;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Row(
-          children: [
-            // Left panel
-            if (showLeft)
-            Container(
-              width: width * 0.4,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primaryLight,
-                  ],
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(48),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.eco_rounded,
-                              color: Colors.white, size: 24),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'GH Manager',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 64),
-                    const Text(
-                      'Welcome back',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -1,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, AppColors.primarySurface],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Manage your guest houses with confidence.',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.75),
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-                    ...[
-                      'Multi-property management',
-                      'Real-time room availability',
-                      'Automated booking workflow',
-                      'Role-based access control',
-                    ].map((f) => _FeatureRow(label: f)),
-                    const Spacer(),
-                    Text(
-                      'Enterprise Edition v2.0',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Right panel
-          Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!showLeft) ...[
-                        Row(
+                      // Logo + title
+                      Center(
+                        child: Column(
                           children: [
                             Container(
-                              width: 40,
-                              height: 40,
+                              width: 56,
+                              height: 56,
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Icon(Icons.eco_rounded,
-                                  color: Colors.white, size: 22),
+                              child: const Icon(Icons.home_work_rounded,
+                                  color: Colors.white, size: 28),
                             ),
-                            const SizedBox(width: 10),
-                            const Text(
+                            const SizedBox(height: 12),
+                            Text(
                               'GH Manager',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
+                              style: AppTextStyles.pageTitle,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sign in to continue',
+                              style: AppTextStyles.bodySmall,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 32),
-                      ],
-                      Text(
-                        'Sign in to your account',
-                        style: AppTextStyles.pageTitle,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Enter your credentials to access the platform.',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
 
                       // Error banner
                       if (error != null) ...[
@@ -203,20 +142,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                       ],
 
                       // Form
                       Form(
                         key: _formKey,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text('Email', style: AppTextStyles.label),
+                            const SizedBox(height: 6),
                             TextFormField(
                               controller: _emailCtrl,
                               enabled: !isLoading,
                               keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(
-                                labelText: 'Email address',
+                                hintText: 'you@example.com',
                                 prefixIcon: Icon(Icons.email_outlined,
                                     size: 20, color: AppColors.textMuted),
                               ),
@@ -231,12 +173,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
+                            Text('Password', style: AppTextStyles.label),
+                            const SizedBox(height: 6),
                             TextFormField(
                               controller: _passCtrl,
                               enabled: !isLoading,
                               obscureText: _obscure,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                hintText: '••••••••',
                                 prefixIcon: const Icon(Icons.lock_outline,
                                     size: 20, color: AppColors.textMuted),
                                 suffixIcon: IconButton(
@@ -263,6 +207,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: isLoading ? null : _submit,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
                                 child: isLoading
                                     ? const SizedBox(
                                         height: 20,
@@ -272,18 +224,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : const Text('Sign In'),
+                                    : const Text('Sign In',
+                                        style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600)),
                               ),
                             ),
+                            if (_showServerWakingMessage) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.warningLight,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: AppColors.warning
+                                          .withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                        color: AppColors.warning,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Waking up backend... First request can take up to 50 seconds on Render Free tier.',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.warning,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
 
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
                       // Demo credentials
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceVariant,
                           borderRadius: BorderRadius.circular(10),
@@ -293,11 +283,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Demo accounts — click to fill',
-                              style: AppTextStyles.caption.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
+                              'Demo accounts — tap to fill',
+                              style: AppTextStyles.label.copyWith(
+                                  color: AppColors.textSecondary),
                             ),
                             const SizedBox(height: 10),
                             Wrap(
@@ -307,23 +295,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 _DemoChip(
                                   label: 'Admin',
                                   onTap: () => _fillCredentials(
-                                    'admin@ghmanager.in',
-                                    'Admin@123',
-                                  ),
+                                      'admin@ghmanager.in', 'Admin@123'),
                                 ),
                                 _DemoChip(
                                   label: 'Booking Mgr',
                                   onTap: () => _fillCredentials(
-                                    'booking@ghmanager.in',
-                                    'Book@123',
-                                  ),
+                                      'booking@ghmanager.in', 'Book@123'),
                                 ),
                                 _DemoChip(
                                   label: 'GH Manager',
                                   onTap: () => _fillCredentials(
-                                    'ramesh@ghmanager.in',
-                                    'GH@123',
-                                  ),
+                                      'ramesh@ghmanager.in', 'GH@123'),
                                 ),
                               ],
                             ),
@@ -336,42 +318,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-        ],
-      ),
-      ),
-    );
-  }
-}
-
-class _FeatureRow extends StatelessWidget {
-  final String label;
-
-  const _FeatureRow({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check, color: Colors.white, size: 12),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 15,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -393,6 +340,8 @@ class _DemoChip extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         side: const BorderSide(color: AppColors.border),
         foregroundColor: AppColors.textSecondary,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       child: Text(
         label,

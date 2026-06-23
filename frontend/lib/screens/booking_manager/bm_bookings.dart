@@ -9,14 +9,14 @@ import '../../widgets/loading_shimmer.dart';
 import '../../widgets/status_chip.dart';
 import '../../widgets/confirmation_dialog.dart';
 
-class AdminBookings extends ConsumerStatefulWidget {
-  const AdminBookings({super.key});
+class BMBookings extends ConsumerStatefulWidget {
+  const BMBookings({super.key});
 
   @override
-  ConsumerState<AdminBookings> createState() => _AdminBookingsState();
+  ConsumerState<BMBookings> createState() => _BMBookingsState();
 }
 
-class _AdminBookingsState extends ConsumerState<AdminBookings> {
+class _BMBookingsState extends ConsumerState<BMBookings> {
   String _searchQuery = '';
   String _statusFilter = 'ALL';
   final _dateFormat = DateFormat('dd MMM yyyy');
@@ -35,7 +35,7 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
     final confirmed = await ConfirmationDialog.show(
       context: context,
       title: 'Mark Payment',
-      message: 'Mark booking for ${b.guestName} as paid?',
+      message: 'Mark booking for ${b.guestName} as paid? Room will be set to Occupied.',
       confirmLabel: 'Mark Paid',
     );
     if (confirmed != true) return;
@@ -43,7 +43,7 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
       await ref.read(bookingsProvider.notifier).markPayment(b.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Payment marked successfully'),
+          content: Text('Payment marked — room is now Occupied'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ));
@@ -63,7 +63,7 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
     final confirmed = await ConfirmationDialog.show(
       context: context,
       title: 'Guest Checkout',
-      message: 'Checkout ${b.guestName} from Room ${b.roomNumber ?? ''}?',
+      message: 'Checkout ${b.guestName} from Room ${b.roomNumber ?? ''}? Room will be freed.',
       confirmLabel: 'Checkout',
     );
     if (confirmed != true) return;
@@ -166,7 +166,11 @@ class _AdminBookingsState extends ConsumerState<AdminBookings> {
               data: (bookings) {
                 final filtered = _filtered(bookings);
                 if (filtered.isEmpty) {
-                  return EmptyState(icon: Icons.calendar_month_rounded, title: 'No bookings found', subtitle: 'Try adjusting your filters');
+                  return EmptyState(
+                    icon: Icons.calendar_month_rounded,
+                    title: 'No bookings found',
+                    subtitle: 'Try adjusting your filters',
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: () => ref.read(bookingsProvider.notifier).fetchBookings(),
@@ -217,11 +221,10 @@ class _BookingCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Row(
@@ -234,9 +237,9 @@ class _BookingCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(booking.guestName, style: AppTextStyles.cardTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Text(booking.guestName,
+                      style: AppTextStyles.cardTitle, maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
-                // Action button
                 if (booking.bookingStatus == 'CONFIRMED' && booking.paymentStatus == 'PENDING')
                   ElevatedButton(
                     onPressed: onMarkPaid,
@@ -271,37 +274,29 @@ class _BookingCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.home_outlined, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${booking.guestHouseName ?? '-'} · Room ${booking.roomNumber ?? '-'}',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
+                Row(children: [
+                  const Icon(Icons.home_outlined, size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(
+                    '${booking.guestHouseName ?? '-'} · Room ${booking.roomNumber ?? '-'}',
+                    style: AppTextStyles.bodySmall,
+                  )),
+                ]),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${dateFormat.format(booking.checkIn)} → ${dateFormat.format(booking.checkOut)}',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                  ],
-                ),
+                Row(children: [
+                  const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${dateFormat.format(booking.checkIn)} → ${dateFormat.format(booking.checkOut)}',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ]),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    StatusChip(status: booking.bookingStatus),
-                    const SizedBox(width: 8),
-                    StatusChip(status: booking.paymentStatus),
-                  ],
-                ),
+                Row(children: [
+                  StatusChip(status: booking.bookingStatus),
+                  const SizedBox(width: 8),
+                  StatusChip(status: booking.paymentStatus),
+                ]),
               ],
             ),
           ),

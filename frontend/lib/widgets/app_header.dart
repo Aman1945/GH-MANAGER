@@ -1,44 +1,32 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 
+/// Simple page header row: title (22sp w700) + optional subtitle + optional trailing widget.
+/// Used inside screen bodies. No auth/navigation logic here.
 class AppHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final List<Widget>? actions;
+  final Widget? trailing;
+  final List<Widget>? actions; // kept for backward compat (shells used this)
 
   const AppHeader({
     super.key,
     required this.title,
     this.subtitle,
+    this.trailing,
     this.actions,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
-
-    return Container(
-      height: 72,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isMobile) ...[
-            IconButton(
-              icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-            const SizedBox(width: 8),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(title, style: AppTextStyles.pageTitle),
                 if (subtitle != null) ...[
@@ -48,14 +36,9 @@ class AppHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (trailing != null) trailing!,
           if (actions != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: actions!
-                  .expand((w) => [w, const SizedBox(width: 8)])
-                  .toList()
-                ..removeLast(),
-            ),
+            Row(mainAxisSize: MainAxisSize.min, children: actions!),
         ],
       ),
     );

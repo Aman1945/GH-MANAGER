@@ -11,7 +11,8 @@ const adminDashboard = async (req, res, next) => {
       confirmedBookings,
       occupiedRooms,
       totalLeads,
-      totalBookings
+      totalBookings,
+      totalRooms
     ] = await Promise.all([
       Lead.countDocuments({ status: 'PENDING' }),
       Lead.countDocuments({ status: 'REJECTED' }),
@@ -19,7 +20,8 @@ const adminDashboard = async (req, res, next) => {
       Booking.countDocuments({ bookingStatus: 'CONFIRMED' }),
       Room.countDocuments({ status: 'OCCUPIED' }),
       Lead.countDocuments(),
-      Booking.countDocuments()
+      Booking.countDocuments(),
+      Room.countDocuments()
     ]);
 
     res.status(200).json({
@@ -31,7 +33,8 @@ const adminDashboard = async (req, res, next) => {
         confirmedBookings,
         occupiedRooms,
         totalLeads,
-        totalBookings
+        totalBookings,
+        totalRooms
       }
     });
   } catch (err) {
@@ -41,10 +44,12 @@ const adminDashboard = async (req, res, next) => {
 
 const bookingManagerDashboard = async (req, res, next) => {
   try {
-    const [pendingLeads, availableRooms, totalBookings] = await Promise.all([
+    const [pendingLeads, availableRooms, totalBookings, confirmedBookings, occupiedRooms] = await Promise.all([
       Lead.countDocuments({ status: 'PENDING' }),
       Room.countDocuments({ status: 'AVAILABLE' }),
-      Booking.countDocuments()
+      Booking.countDocuments(),
+      Booking.countDocuments({ bookingStatus: 'CONFIRMED' }),
+      Room.countDocuments({ status: 'OCCUPIED' })
     ]);
 
     res.status(200).json({
@@ -52,7 +57,9 @@ const bookingManagerDashboard = async (req, res, next) => {
       data: {
         pendingLeads,
         availableRooms,
-        totalBookings
+        totalBookings,
+        confirmedBookings,
+        occupiedRooms
       }
     });
   } catch (err) {

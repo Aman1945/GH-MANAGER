@@ -22,9 +22,10 @@ class ConfirmationDialog extends StatelessWidget {
     String confirmLabel = 'Confirm',
     bool isDangerous = false,
   }) {
-    return showDialog<bool>(
+    return showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => ConfirmationDialog(
         title: title,
         message: message,
@@ -36,45 +37,81 @@ class ConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isDangerous ? AppColors.errorLight : AppColors.primarySurface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isDangerous ? Icons.warning_rounded : Icons.help_outline_rounded,
+              color: isDangerous ? AppColors.error : AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Text(
+            title,
+            style: AppTextStyles.cardTitle.copyWith(fontSize: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(message, style: AppTextStyles.bodySmall),
+          const SizedBox(height: 24),
+
+          Row(
             children: [
-              Text(title,
-                  style: AppTextStyles.sectionTitle
-                      .copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              Text(message, style: AppTextStyles.bodySmall),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel'),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isDangerous ? AppColors.error : AppColors.primary,
+                    foregroundColor: Colors.white,
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDangerous
-                          ? AppColors.error
-                          : AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Text(confirmLabel),
-                  ),
-                ],
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: Text(confirmLabel),
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

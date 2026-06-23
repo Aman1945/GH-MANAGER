@@ -253,6 +253,75 @@ pm2 monit                  # monitor CPU/memory
 
 ---
 
+## Part 5 — Render Deployment (Alternative to EC2)
+
+### 5.1 — Deploy Backend to Render
+
+1. **Push code to GitHub**
+   ```bash
+   git add . && git commit -m "deploy" && git push origin main
+   ```
+
+2. **Create Render service**
+   - Go to https://render.com → Sign up
+   - New → Web Service
+   - Connect GitHub account
+   - Select `HOTEL BOOKING/backend` folder
+   - **Name:** gh-manager-backend
+   - **Environment:** Node
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm run dev`
+   - Add environment variables:
+     ```
+     MONGODB_URI = your_mongodb_atlas_url
+     JWT_SECRET = your_jwt_secret
+     EMAIL_USER = (optional)
+     EMAIL_PASS = (optional)
+     ```
+   - Plan: **Free** (will auto-spin down after 15 min inactivity)
+   - Click Deploy
+
+3. **Note the URL** (e.g., `https://gh-manager-backend.onrender.com`)
+
+### 5.2 — Keep Server ALIVE on Render (FREE)
+
+**Problem:** Render spins down free apps after 15 min inactivity → slow first request
+
+**Solution:** Use UptimeRobot to ping every 5 minutes
+
+**Setup (2 minutes):**
+
+1. Go to https://uptimerobot.com → Sign up FREE
+2. Click **Add Monitor** → Select **HTTP(s)**
+3. Fill form:
+   ```
+   URL: https://gh-manager-backend.onrender.com/api/health
+   Friendly Name: GH Manager Backend
+   Monitoring Interval: Every 5 minutes
+   Timeout: 30 seconds
+   ```
+4. Click **Create Monitor**
+5. Done! ✅
+
+Now Render app will get pinged every 5 minutes → stays warm → instant response
+
+### 5.3 — Deploy Flutter Frontend to Render (Optional)
+
+1. Add a `render.yaml` in project root:
+   ```yaml
+   services:
+   - type: web
+     name: gh-manager-frontend
+     buildCommand: flutter build web --dart-define=API_URL=https://gh-manager-backend.onrender.com/api
+     staticPublishPath: build/web
+   ```
+
+2. Push to GitHub, Render auto-deploys
+
+3. Frontend available at: `https://gh-manager-frontend.onrender.com`
+
+---
+
 ## Troubleshooting
 
 **MongoDB: "bad auth" error**
@@ -268,4 +337,8 @@ pm2 monit                  # monitor CPU/memory
 → Run `pm2 save` and `pm2 startup`, execute the printed command
 
 **CORS errors in browser**
-→ Backend `app.js` already has `cors({ origin: '*' })` — check API_URL matches EC2 IP
+→ Backend `app.js` already has `cors({ origin: '*' })` — check API_URL matches server IP
+
+**Render server going to sleep**
+→ Use UptimeRobot (free) to ping `/api/health` every 5 minutes
+→ See Part 5.2 above

@@ -9,84 +9,44 @@ class StatusChip extends StatelessWidget {
   ({Color bg, Color text}) _colors() {
     switch (status.toUpperCase()) {
       case 'AVAILABLE':
-        return (
-          bg: AppColors.statusAvailableBg,
-          text: AppColors.statusAvailableText
-        );
-      case 'BLOCKED':
-        return (
-          bg: AppColors.statusBlockedBg,
-          text: AppColors.statusBlockedText
-        );
-      case 'OCCUPIED':
-        return (
-          bg: AppColors.statusOccupiedBg,
-          text: AppColors.statusOccupiedText
-        );
-      case 'PENDING':
-        return (
-          bg: AppColors.statusPendingBg,
-          text: AppColors.statusPendingText
-        );
       case 'CONFIRMED':
-        return (
-          bg: AppColors.statusConfirmedBg,
-          text: AppColors.statusConfirmedText
-        );
-      case 'REJECTED':
-        return (
-          bg: AppColors.statusRejectedBg,
-          text: AppColors.statusRejectedText
-        );
-      case 'COMPLETED':
-        return (
-          bg: AppColors.statusCompletedBg,
-          text: AppColors.statusCompletedText
-        );
       case 'PAID':
-        return (bg: AppColors.statusPaidBg, text: AppColors.statusPaidText);
-      case 'CANCELLED':
-        return (
-          bg: AppColors.statusCancelledBg,
-          text: AppColors.statusCancelledText
-        );
+      case 'COMPLETED':
+        return (bg: AppColors.statusAvailableBg, text: AppColors.statusAvailableText);
+      case 'PENDING':
+        return (bg: AppColors.statusPendingBg, text: AppColors.statusPendingText);
+      case 'BLOCKED':
+        return (bg: AppColors.statusBlockedBg, text: AppColors.statusBlockedText);
+      case 'OCCUPIED':
+      case 'REJECTED':
+        return (bg: AppColors.statusOccupiedBg, text: AppColors.statusOccupiedText);
+      case 'MAINTENANCE':
+        return (bg: AppColors.statusMaintenanceBg, text: AppColors.statusMaintenanceText);
+      case 'OPEN':
+        return (bg: AppColors.statusPendingBg, text: AppColors.statusPendingText);
+      case 'RESOLVED':
+        return (bg: AppColors.statusAvailableBg, text: AppColors.statusAvailableText);
       default:
-        return (bg: AppColors.statusCancelledBg, text: AppColors.textMuted);
+        return (bg: AppColors.statusCancelledBg, text: AppColors.statusCancelledText);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = _colors();
-    final isSmall = MediaQuery.of(context).size.width < 600;
     return Container(
-      padding: EdgeInsets.symmetric(
-          horizontal: isSmall ? 6 : 10, vertical: isSmall ? 2 : 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: colors.bg,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: isSmall ? 3 : 4,
-            height: isSmall ? 3 : 4,
-            decoration: BoxDecoration(
-              color: colors.text,
-              shape: BoxShape.circle,
-            ),
-          ),
-          SizedBox(width: isSmall ? 4 : 6),
-          Text(
-            status,
-            style: TextStyle(
-              color: colors.text,
-              fontSize: isSmall ? 10 : 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      child: Text(
+        status,
+        style: TextStyle(
+          color: colors.text,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

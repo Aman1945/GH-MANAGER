@@ -21,6 +21,8 @@ app.use('/api/approvals', require('./routes/approvals'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/rooms', require('./routes/rooms'));
 app.use('/api/maintenance', require('./routes/maintenance'));
+app.use('/api/guest-houses', require('./routes/guestHouses'));
+app.use('/api', require('./routes/sessions'));
 
 // Global error handler (must be last)
 app.use(errorHandler);

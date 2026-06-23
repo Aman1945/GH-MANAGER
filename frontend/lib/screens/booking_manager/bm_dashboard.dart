@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../providers/dashboard_provider.dart';
-import '../../widgets/app_header.dart';
-import '../../widgets/metric_card.dart';
 import '../../widgets/loading_shimmer.dart';
+import '../../widgets/metric_card.dart';
 
 class BMDashboard extends ConsumerWidget {
   const BMDashboard({super.key});
@@ -13,242 +13,209 @@ class BMDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashAsync = ref.watch(bmDashboardProvider);
-    final width = MediaQuery.of(context).size.width;
-    final isMobile = width < 600;
+    final now = DateTime.now();
+    final greeting = now.hour < 12
+        ? 'Good morning'
+        : now.hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+    final dateStr = DateFormat('EEEE, d MMM').format(now);
 
-    return Column(
-      children: [
-        AppHeader(
-          title: 'Dashboard',
-          subtitle: 'Booking Manager Overview',
-          actions: [
-            OutlinedButton.icon(
-              onPressed: () => ref.refresh(bmDashboardProvider),
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Refresh'),
-            ),
-          ],
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                dashAsync.when(
-                  loading: () => isMobile
-                      ? Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(child: LoadingShimmer.metric()),
-                                const SizedBox(width: 16),
-                                Expanded(child: LoadingShimmer.metric()),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            LoadingShimmer.metric(),
-                          ],
-                        )
-                      : Row(
-                          children: List.generate(3, (_) {
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 16),
-                                child: LoadingShimmer.metric(),
-                              ),
-                            );
-                          }),
-                        ),
-                  error: (e, _) => Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.errorLight,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.error),
-                    ),
-                    child: Row(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(bmDashboardProvider),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Greeting (mirror of admin shell top bar style but inside body)
+              Text(greeting, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted)),
+              const SizedBox(height: 2),
+              Text('Booking Manager', style: AppTextStyles.pageTitle),
+              Text(dateStr, style: AppTextStyles.caption),
+              const SizedBox(height: 20),
+
+              // KPIs
+              dashAsync.when(
+                loading: () => LayoutBuilder(builder: (context, constraints) {
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.5,
+                    children: List.generate(4, (_) => LoadingShimmer.metric()),
+                  );
+                }),
+                error: (e, _) => Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.error),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppColors.error),
+                      const SizedBox(width: 12),
+                      const Expanded(child: Text('Failed to load dashboard')),
+                      TextButton(
+                        onPressed: () => ref.refresh(bmDashboardProvider),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+                data: (stats) {
+                  final pendingLeads = stats['pendingLeads'] ?? 0;
+                  final availableRooms = stats['availableRooms'] ?? 0;
+                  final totalBookings = stats['totalBookings'] ?? 0;
+                  final confirmedBookings = stats['confirmedBookings'] ?? 0;
+
+                  return LayoutBuilder(builder: (context, constraints) {
+                    final cols = constraints.maxWidth < 500 ? 2 : 4;
+                    return GridView.count(
+                      crossAxisCount: cols,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: cols == 2 ? 1.5 : 1.6,
                       children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.error),
-                        const SizedBox(width: 12),
-                        Text('Failed to load dashboard',
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: AppColors.error)),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () =>
-                              ref.refresh(bmDashboardProvider),
-                          child: const Text('Retry'),
+                        MetricCard(
+                          title: 'Pending Leads',
+                          value: '$pendingLeads',
+                          icon: Icons.pending_actions_rounded,
+                          color: AppColors.warning,
+                          trend: pendingLeads > 0 ? '!' : null,
+                        ),
+                        MetricCard(
+                          title: 'Available Rooms',
+                          value: '$availableRooms',
+                          icon: Icons.meeting_room_rounded,
+                          color: AppColors.success,
+                        ),
+                        MetricCard(
+                          title: 'Total Bookings',
+                          value: '$totalBookings',
+                          icon: Icons.calendar_month_rounded,
+                          color: AppColors.info,
+                        ),
+                        MetricCard(
+                          title: 'Confirmed',
+                          value: '$confirmedBookings',
+                          icon: Icons.check_circle_outline_rounded,
+                          color: AppColors.primary,
                         ),
                       ],
+                    );
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Pending approvals alert banner
+              dashAsync.when(
+                loading: () => LoadingShimmer.card(),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (stats) {
+                  final pending = stats['pendingLeads'] ?? 0;
+                  if (pending == 0) return const SizedBox.shrink();
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
                     ),
-                  ),
-                  data: (stats) {
-                    final card1 = MetricCard(
-                      title: 'Pending Leads',
-                      value: '${stats['pendingLeads'] ?? 0}',
-                      icon: Icons.pending_actions_rounded,
-                      color: AppColors.warning,
-                      subtitle: 'Awaiting review',
-                    );
-                    final card2 = MetricCard(
-                      title: 'Available Rooms',
-                      value: '${stats['availableRooms'] ?? 0}',
-                      icon: Icons.meeting_room_rounded,
-                      color: AppColors.success,
-                      subtitle: 'Ready to assign',
-                    );
-                    final card3 = MetricCard(
-                      title: 'Total Bookings',
-                      value: '${stats['totalBookings'] ?? 0}',
-                      icon: Icons.calendar_month_rounded,
-                      color: AppColors.info,
-                      subtitle: 'All time',
-                    );
-
-                    return isMobile
-                        ? Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: card1),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: card2),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              card3,
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Expanded(child: card1),
-                              const SizedBox(width: 16),
-                              Expanded(child: card2),
-                              const SizedBox(width: 16),
-                              Expanded(child: card3),
-                            ],
-                          );
-                  },
-                ),
-                const SizedBox(height: 28),
-
-                // Quick action card
-                dashAsync.when(
-                  loading: () => LoadingShimmer.card(),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (stats) {
-                    final pending = stats['pendingLeads'] ?? 0;
-                    return Container(
-                      padding: EdgeInsets.all(isMobile ? 16 : 24),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: isMobile
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.fact_check_rounded, color: AppColors.warning, size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.warningLight,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.fact_check_rounded,
-                                        color: AppColors.warning,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'Pending Approvals',
-                                        style: AppTextStyles.cardTitle,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  pending > 0
-                                      ? 'You have $pending leads waiting for your review.'
-                                      : 'No pending leads at the moment.',
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                                if (pending > 0) ...[
-                                  const SizedBox(height: 16),
-                                  ElevatedButton.icon(
-                                    onPressed: () =>
-                                        context.go('/bm/approvals'),
-                                    icon: const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 16),
-                                    label: const Text('Review Approvals'),
-                                  ),
-                                ],
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.warningLight,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.fact_check_rounded,
-                                    color: AppColors.warning,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Pending Approvals',
-                                        style: AppTextStyles.cardTitle,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        pending > 0
-                                            ? 'You have $pending leads waiting for your review.'
-                                            : 'No pending leads at the moment.',
-                                        style: AppTextStyles.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (pending > 0)
-                                  ElevatedButton.icon(
-                                    onPressed: () =>
-                                        context.go('/bm/approvals'),
-                                    icon: const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 16),
-                                    label: const Text('Review Approvals'),
-                                  ),
+                                Text('$pending Leads Awaiting Review',
+                                    style: AppTextStyles.cardTitle.copyWith(color: AppColors.warning)),
+                                Text('Review and assign rooms to pending leads.',
+                                    style: AppTextStyles.caption),
                               ],
                             ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () => context.go('/bm/approvals'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.warning,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              // Quick actions
+              Text('Quick Actions', style: AppTextStyles.sectionTitle.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => context.go('/bm/approvals'),
+                      icon: const Icon(Icons.fact_check_rounded, size: 18),
+                      label: const Text('Approvals', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => context.go('/bm/room-live'),
+                      icon: const Icon(Icons.sensors_rounded, size: 18),
+                      label: const Text('Live View', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

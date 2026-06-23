@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../providers/leads_provider.dart';
 import '../../providers/rooms_provider.dart';
-import '../../widgets/app_header.dart';
 
-// Legacy screen — kept for backward compatibility with /admin/create-lead route.
-// New users should use AdminLeads (/admin/leads) which includes a create dialog.
 class AdminCreateLead extends ConsumerStatefulWidget {
   const AdminCreateLead({super.key});
 
@@ -17,45 +15,41 @@ class AdminCreateLead extends ConsumerStatefulWidget {
 
 class _AdminCreateLeadState extends ConsumerState<AdminCreateLead> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
   DateTime? _checkIn;
   DateTime? _checkOut;
-  String? _selectedGuestHouseId;
+  String? _selectedGhId;
   bool _isSubmitting = false;
-
   final _dateFormat = DateFormat('dd MMM yyyy');
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate(BuildContext context, bool isCheckIn) async {
+  Future<void> _pickDate(bool isCheckIn) async {
     final now = DateTime.now();
     final initial = isCheckIn
         ? (_checkIn ?? now)
         : (_checkOut ?? (_checkIn ?? now).add(const Duration(days: 1)));
-
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
     );
-
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         if (isCheckIn) {
           _checkIn = picked;
-          if (_checkOut != null && !_checkOut!.isAfter(picked)) {
-            _checkOut = null;
-          }
+          if (_checkOut != null && !_checkOut!.isAfter(picked)) _checkOut = null;
         } else {
           _checkOut = picked;
         }
@@ -65,258 +59,247 @@ class _AdminCreateLeadState extends ConsumerState<AdminCreateLead> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_checkIn == null) {
-      _showSnack('Please select check-in date');
-      return;
-    }
-    if (_checkOut == null) {
-      _showSnack('Please select check-out date');
-      return;
-    }
-    if (_selectedGuestHouseId == null) {
-      _showSnack('Please select a guest house');
-      return;
-    }
-
+    if (_checkIn == null) { _showSnack('Please select check-in date'); return; }
+    if (_checkOut == null) { _showSnack('Please select check-out date'); return; }
+    if (_selectedGhId == null) { _showSnack('Please select a guest house'); return; }
     setState(() => _isSubmitting = true);
     try {
       await ref.read(leadsProvider.notifier).createLead({
-        'guestName': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
+        'guestName': _nameCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
         'checkIn': _checkIn!.toIso8601String(),
         'checkOut': _checkOut!.toIso8601String(),
-        'preferredGuestHouseId': _selectedGuestHouseId,
+        'preferredGuestHouseId': _selectedGhId,
+        if (_notesCtrl.text.trim().isNotEmpty) 'notes': _notesCtrl.text.trim(),
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Lead created successfully!'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _formKey.currentState!.reset();
-        _nameController.clear();
-        _phoneController.clear();
-        _emailController.clear();
-        setState(() {
-          _checkIn = null;
-          _checkOut = null;
-          _selectedGuestHouseId = null;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Lead created successfully'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ));
+        context.go('/admin/leads');
       }
     } catch (e) {
-      if (mounted) {
-        _showSnack(e.toString().replaceFirst('Exception: ', ''));
-      }
+      if (mounted) _showSnack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     final guestHousesAsync = ref.watch(guestHousesProvider);
 
-    return Column(
-      children: [
-        const AppHeader(
-          title: 'Create Lead',
-          subtitle: 'Submit a new guest inquiry',
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Container(
-                padding: const EdgeInsets.all(28),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Guest Name',
-                          prefixIcon: Icon(Icons.person_outlined,
-                              size: 18, color: AppColors.textMuted),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Guest name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone',
-                          prefixIcon: Icon(Icons.phone_outlined,
-                              size: 18, color: AppColors.textMuted),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Phone is required';
-                          }
-                          if (!RegExp(r'^\d{10}$').hasMatch(v.trim())) {
-                            return 'Enter a valid 10-digit phone number';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined,
-                              size: 18, color: AppColors.textMuted),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Email is required';
-                          }
-                          if (!RegExp(r'^[\w.-]+@[\w.-]+\.\w+$')
-                              .hasMatch(v.trim())) {
-                            return 'Enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _pickDate(context, true),
-                              borderRadius: BorderRadius.circular(10),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Check-In Date',
-                                  prefixIcon: Icon(
-                                      Icons.calendar_today_outlined,
-                                      size: 18,
-                                      color: AppColors.textMuted),
-                                ),
-                                child: Text(
-                                  _checkIn != null
-                                      ? _dateFormat.format(_checkIn!)
-                                      : 'Select date',
-                                  style: _checkIn != null
-                                      ? AppTextStyles.bodyMedium
-                                      : AppTextStyles.bodyMedium
-                                          .copyWith(
-                                              color: AppColors.textMuted),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _pickDate(context, false),
-                              borderRadius: BorderRadius.circular(10),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Check-Out Date',
-                                  prefixIcon: Icon(
-                                      Icons.calendar_month_outlined,
-                                      size: 18,
-                                      color: AppColors.textMuted),
-                                ),
-                                child: Text(
-                                  _checkOut != null
-                                      ? _dateFormat.format(_checkOut!)
-                                      : 'Select date',
-                                  style: _checkOut != null
-                                      ? AppTextStyles.bodyMedium
-                                      : AppTextStyles.bodyMedium
-                                          .copyWith(
-                                              color: AppColors.textMuted),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      guestHousesAsync.when(
-                        loading: () =>
-                            const LinearProgressIndicator(
-                                color: AppColors.primary),
-                        error: (e, _) => Text(
-                          'Failed to load guest houses',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.error),
-                        ),
-                        data: (guestHouses) {
-                          return DropdownButtonFormField<String>(
-                            initialValue: _selectedGuestHouseId,
-                            decoration: const InputDecoration(
-                              labelText: 'Preferred Guest House',
-                              prefixIcon: Icon(Icons.home_outlined,
-                                  size: 18,
-                                  color: AppColors.textMuted),
-                            ),
-                            items: guestHouses.map((gh) {
-                              return DropdownMenuItem(
-                                value: gh.id,
-                                child: Text(gh.name,
-                                    style: AppTextStyles.bodyMedium),
-                              );
-                            }).toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedGuestHouseId = val),
-                            validator: (v) =>
-                                v == null ? 'Please select a guest house' : null,
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isSubmitting ? null : _submit,
-                          child: _isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2),
-                                )
-                              : const Text('Submit Lead'),
-                        ),
-                      ),
-                    ],
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: [
+          // Back header
+          Container(
+            color: AppColors.surface,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.go('/admin/leads'),
+                    icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
                   ),
+                  const Spacer(),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _field('Guest Name *'),
+                    TextFormField(
+                      controller: _nameCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Full name',
+                        prefixIcon: Icon(Icons.person_outline, size: 18, color: AppColors.textMuted),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                    ),
+                    _gap(),
+                    _field('Phone *'),
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: '10-digit phone',
+                        prefixIcon: Icon(Icons.phone_outlined, size: 18, color: AppColors.textMuted),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (!RegExp(r'^\d{10}$').hasMatch(v.trim())) return '10 digits required';
+                        return null;
+                      },
+                    ),
+                    _gap(),
+                    _field('Email *'),
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'guest@example.com',
+                        prefixIcon: Icon(Icons.email_outlined, size: 18, color: AppColors.textMuted),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        if (!v.contains('@')) return 'Invalid email';
+                        return null;
+                      },
+                    ),
+                    _gap(),
+                    _field('Guest House *'),
+                    guestHousesAsync.when(
+                      loading: () => const LinearProgressIndicator(color: AppColors.primary),
+                      error: (_, __) => Text('Failed to load', style: AppTextStyles.bodySmall.copyWith(color: AppColors.error)),
+                      data: (ghs) => DropdownButtonFormField<String>(
+                        value: _selectedGhId,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.home_outlined, size: 18, color: AppColors.textMuted),
+                        ),
+                        hint: Text('Select guest house', style: AppTextStyles.bodySmall),
+                        items: ghs.map((gh) => DropdownMenuItem(value: gh.id, child: Text(gh.name))).toList(),
+                        onChanged: (val) => setState(() => _selectedGhId = val),
+                        validator: (v) => v == null ? 'Required' : null,
+                      ),
+                    ),
+                    _gap(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _field('Check-in *'),
+                              _DateTile(
+                                label: _checkIn != null ? _dateFormat.format(_checkIn!) : 'Select date',
+                                icon: Icons.calendar_today_outlined,
+                                onTap: () => _pickDate(true),
+                                hasValue: _checkIn != null,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _field('Check-out *'),
+                              _DateTile(
+                                label: _checkOut != null ? _dateFormat.format(_checkOut!) : 'Select date',
+                                icon: Icons.calendar_month_outlined,
+                                onTap: () => _pickDate(false),
+                                hasValue: _checkOut != null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    _gap(),
+                    _field('Notes (optional)'),
+                    TextFormField(
+                      controller: _notesCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Any additional info...',
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(width: 20, height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Create Lead', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(String label) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(label, style: AppTextStyles.label));
+
+  Widget _gap() => const SizedBox(height: 16);
+}
+
+class _DateTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool hasValue;
+
+  const _DateTile({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    required this.hasValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border),
         ),
-      ],
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: AppColors.textMuted),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: hasValue ? AppColors.textPrimary : AppColors.textMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

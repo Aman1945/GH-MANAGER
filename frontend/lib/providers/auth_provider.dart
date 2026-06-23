@@ -49,7 +49,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = await _api.getMe();
       final userMap = data.containsKey('user')
           ? (data['user'] as Map<String, dynamic>? ?? {})
-          : data;
+          : (data.containsKey('data')
+              ? (data['data'] as Map<String, dynamic>? ?? {})
+              : data);
       final user = UserModel.fromJson(userMap);
       state = state.copyWith(user: user, isLoading: false);
     } catch (_) {

@@ -20,41 +20,41 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 40, color: AppColors.primary),
             ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: AppColors.textMuted,
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: AppTextStyles.cardTitle.copyWith(fontSize: 16),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: AppTextStyles.sectionTitle.copyWith(fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: AppTextStyles.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: onAction,
-              child: Text(actionLabel!),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: AppTextStyles.bodySmall,
+              textAlign: TextAlign.center,
             ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
